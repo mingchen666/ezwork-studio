@@ -1,6 +1,6 @@
 version: "3.9"
 services:
-  frontend:
+  ezworkstudio-frontend:
     build: ./frontend
     ports:
       - "1580:8080"

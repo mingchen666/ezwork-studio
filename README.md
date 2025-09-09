@@ -56,7 +56,7 @@ docker build -t ezworkstudio-backend ./backend
 
 ```bash
 # 前端
-docker run -d --name fe \
+docker run -d --name ezworkstudio-frontend \
   --network ezwork-net \
   -p 1580:8080 \
   ezworkstudio-frontend
