@@ -1,12 +1,12 @@
 # Ezwork Studio
 
-一站式AI绘图客户端，基于 Gemini AI模型的智能图像生成与编辑工具。
+一站式AI绘图客户端，基于 Gemini AI模型的智能图像生成工具。
 
 ## 项目介绍
 
-EZWork Studio 是一个现代化的AI绘图应用，支持文字生成图片、图片编辑、历史记录管理等功能。采用前后端分离架构，提供流畅的用户体验。
+EZWork Studio 是一个现代化的AI绘图客户端，支持文字生成图片、图片编辑、历史记录管理等功能。采用前后端分离架构，提供流畅的用户体验。
 
-### 主要功能
+## 主要功能
 
 - 🎨 AI图像生成（基于Google Gemini模型）
 - 🖼️ 图片编辑
@@ -20,15 +20,65 @@ EZWork Studio 是一个现代化的AI绘图应用，支持文字生成图片、�
 
 ## 快速开始
 
-### 环境要求
+
+### 1.Docker Compose部署
+
+#### 构建并启动服务
+
+```bash
+git clone https://github.com/mingchen666/ezwork-studio.git
+cd ezwork-studio
+
+# 启动服务
+docker compose up --build -d
+
+```
+
+### 2.Docker手动构建镜像部署
+
+#### (1).创建网络
+```bash
+docker network create ezwork-net
+
+```
+#### (2).构建镜像
+```bash
+# 前端
+docker build -t ezworkstudio-frontend ./frontend
+
+# 后端
+docker build -t ezworkstudio-backend ./backend
+
+```
+
+
+#### (3).启动容器
+
+```bash
+# 前端
+docker run -d --name fe \
+  --network ezwork-net \
+  -p 1580:8080 \
+  ezworkstudio-frontend
+
+# 后端
+docker run -d --name ezworkstudio-backend \
+  --network ezwork-net \
+  --env-file ./backend/.env \
+  -p 5000:5000 \
+  ezworkstudio-backend
+
+```
+
+
+### 3.本地开发
+>环境要求
 
 - Node.js 20+
 - Python 3.10+
 - Docker
 
-### 本地开发
-
-#### 前端开发
+#### 前端打包
 
 ```bash
 cd frontend
@@ -36,7 +86,7 @@ pnpm install
 pnpm dev
 ```
 
-#### 后端开发
+#### 后端启动
 
 ```bash
 cd backend
@@ -45,9 +95,8 @@ pip install -r requirements.txt
 python app.py
 ```
 
-### 环境配置
+#### 后端环境配置(.env文件)
 
-#### 后端环境变量 (.env)
 ```bash
 # 数据库
 DATABASE_URL=xxxx
@@ -60,26 +109,19 @@ MAIL_SERVER=smtp.qq.com
 MAIL_USERNAME=your-email@qq.com
 MAIL_PASSWORD=your-email-password
 
-# 阿里云OSS
-OSS_ACCESS_KEY_ID=your-oss-access-key
-OSS_ACCESS_KEY_SECRET=your-oss-secret-key
-OSS_REGION=cn-hangzhou
-OSS_BUCKET_NAME=your-bucket-name
 .......
 ```
 
-## Docker部署
+部署成功请访问：http://localhost:1580
 
-### 构建并启动服务
+## 发布记录
 
-```bash
-# 克隆项目
-git clone https://github.com/mingchen666/ezwork-studio.git
-cd ezwork-studio
+| 版本   | 日期       | 说明                                                                 |
+|--------|------------|----------------------------------------------------------------------|
+| v0.0.0 | 2025-09-09 | 初始版本发布：AI 绘图、图片编辑、历史记录、Docker 部署等                 |
+| v0.0.1 | 待定 | 待定                            |
 
-# 启动服务
-docker-compose up -d
-```
+
 
 ## 许可证
 
