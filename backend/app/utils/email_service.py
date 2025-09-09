@@ -31,15 +31,15 @@ class EmailService:
             # 根据发送类型选择邮件模板和主题
             templates = {
                 1: {
-                    'subject': '【AI绘画程序】邮箱注册验证码',
+                    'subject': '【Ezwork Studio】邮箱注册验证码',
                     'template': 'register_template'
                 },
                 2: {
-                    'subject': '【AI绘画程序】密码重置验证码',
+                    'subject': '【Ezwork Studio】密码重置验证码',
                     'template': 'reset_password_template'
                 },
                 3: {
-                    'subject': '【AI绘画程序】登录验证码',
+                    'subject': '【Ezwork Studio】登录验证码',
                     'template': 'login_template'
                 }
             }
@@ -120,17 +120,6 @@ class EmailService:
             return {'success': False, 'message': f'验证失败: {str(e)}'}
 
     def check_send_frequency(self, email, send_type, interval_minutes=1):
-        """
-        检查发送频率限制
-
-        Args:
-            email: 邮箱
-            send_type: 发送类型
-            interval_minutes: 发送间隔（分钟）
-
-        Returns:
-            dict: 检查结果
-        """
         try:
             # 查找最近的发送记录
             recent_send = SendCode.query.filter_by(
@@ -155,18 +144,6 @@ class EmailService:
             return {'can_send': False, 'message': '检查失败'}
 
     def _send_email(self, to, subject, template, **kwargs):
-        """
-        发送邮件的内部方法
-
-        Args:
-            to: 收件人
-            subject: 主题
-            template: 模板名称
-            **kwargs: 模板参数
-
-        Returns:
-            bool: 发送是否成功
-        """
         try:
             # 获取邮件模板
             html_content = self._get_email_template(template, **kwargs)
@@ -218,12 +195,12 @@ class EmailService:
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>🎨 AI绘画程序</h1>
+                    <h1>🎨 Ezwork Studio</h1>
                     <p>欢迎注册我们的服务</p>
                 </div>
                 <div class="content">
                     <h2>邮箱验证码</h2>
-                    <p>您好！感谢您注册AI绘画程序。</p>
+                    <p>您好！感谢您注册Ezwork Studio。</p>
                     <p>您的验证码是：</p>
                     <div class="code">{{ code }}</div>
                     <div class="warning">
@@ -238,7 +215,7 @@ class EmailService:
                 </div>
                 <div class="footer">
                     <p>此邮件由系统自动发送，请勿回复</p>
-                    <p>© 2024 AI绘画程序. All rights reserved.</p>
+                    <p>© 2025 Ezwork Studio. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -267,7 +244,7 @@ class EmailService:
             <div class="container">
                 <div class="header">
                     <h1>🔒 密码重置</h1>
-                    <p>AI绘画程序</p>
+                    <p>Ezwork Studio</p>
                 </div>
                 <div class="content">
                     <h2>密码重置验证码</h2>
@@ -287,7 +264,7 @@ class EmailService:
                 </div>
                 <div class="footer">
                     <p>此邮件由系统自动发送，请勿回复</p>
-                    <p>© 2024 AI绘画程序. All rights reserved.</p>
+                    <p>© 2025 Ezwork Studio. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -316,11 +293,11 @@ class EmailService:
             <div class="container">
                 <div class="header">
                     <h1>🔐 安全登录</h1>
-                    <p>AI绘画程序</p>
+                    <p>Ezwork Studio</p>
                 </div>
                 <div class="content">
                     <h2>登录验证码</h2>
-                    <p>您好！检测到您正在尝试登录AI绘画程序。</p>
+                    <p>您好！检测到您正在尝试登录Ezwork Studio。</p>
                     <p>您的登录验证码是：</p>
                     <div class="code">{{ code }}</div>
                     <div class="info">
@@ -335,7 +312,7 @@ class EmailService:
                 </div>
                 <div class="footer">
                     <p>此邮件由系统自动发送，请勿回复</p>
-                    <p>© 2025 AI绘画程序. All rights reserved.</p>
+                    <p>© 2025 Ezwork Studio. All rights reserved.</p>
                 </div>
             </div>
         </body>
