@@ -1,7 +1,9 @@
 version: "3.9"
 services:
   ezworkstudio-frontend:
-    build: ./frontend
+    build:
+      context: ./frontend        # 上下文切到 frontend/
+      dockerfile: Dockerfile
     ports:
       - "1580:8080"
     depends_on:
