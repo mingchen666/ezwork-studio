@@ -1,88 +1,23 @@
-<template>
-  <el-dialog
-    v-model="visible"
-    title="API设置"
-    :width="dialogWidth"
-    :before-close="handleClose"
-    destroy-on-close
-    :class="{ 'mobile-dialog': isMobile }"
-  >
-    <template #header>
-      <div class="dialog-header">
-        <el-icon><Setting /></el-icon>
-        <span>API设置</span>
-      </div>
-    </template>
-    
-    <el-form
-      ref="formRef"
-      :model="form"
-      :rules="rules"
-      :label-width="labelWidth"
-      label-position="left"
-    >
-      <el-form-item label="API Base URL" prop="baseUrl">
-        <el-input
-          v-model="form.baseUrl"
-          placeholder="例如: https://api.juheai.top"
-          clearable
-        />
-      </el-form-item>
-      
-      <el-form-item label="API Key" prop="apiKey">
-        <el-input
-          v-model="form.apiKey"
-          type="password"
-          placeholder="请输入您的API Key"
-          show-password
-          clearable
-        />
-        <div class="form-item-extra">
-          <el-button
-            type="primary"
-            link
-            @click="openApiKeyPage"
-          >
-            立即获取 API Key
-          </el-button>
-        </div>
-      </el-form-item>
-
-      <!-- 配置状态显示 -->
-      <el-form-item label="配置状态">
-        <el-tag :type="isConfigured ? 'success' : 'warning'">
-          {{ isConfigured ? '已配置' : '未配置' }}
-        </el-tag>
-      </el-form-item>
-    </el-form>
-    
-    <template #footer>
-      <div class="dialog-footer">
-        <el-button @click="handleClose">取消</el-button>
-        <el-button type="primary" @click="handleSave" :loading="saving">
-          保存设置
-        </el-button>
-      </div>
-    </template>
-  </el-dialog>
-</template>
-
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Setting } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Setting, Close } from '@element-plus/icons-vue'
 import { useSettingsStore } from '@/stores/settings'
+import { useUserStore } from '@/stores/user'
 import { useResponsive } from '@/hooks/useResponsive'
+import { useRouter } from 'vue-router'
 
 const settingsStore = useSettingsStore()
+const userStore = useUserStore()
 const { isMobile } = useResponsive()
+const router = useRouter()
 
 // Props
 const props = defineProps({
   modelValue: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 })
 
 // Emits
@@ -96,7 +31,8 @@ const formRef = ref()
 // 表单数据
 const form = ref({
   baseUrl: '',
-  apiKey: ''
+  apiKey: '',
+  translationModel: 'gpt-4.1',
 })
 
 // 计算属性
@@ -115,25 +51,28 @@ const labelWidth = computed(() => {
 const rules = {
   baseUrl: [
     { required: true, message: '请输入API Base URL', trigger: 'blur' },
-    { 
-      pattern: /^https?:\/\/.+/, 
-      message: '请输入有效的URL地址', 
-      trigger: 'blur' 
-    }
+    {
+      pattern: /^https?:\/\/.+/,
+      message: '请输入有效的URL地址',
+      trigger: 'blur',
+    },
   ],
   apiKey: [
     { required: true, message: '请输入API Key', trigger: 'blur' },
-    { min: 10, message: 'API Key长度不能少于10位', trigger: 'blur' }
-  ]
+    { min: 10, message: 'API Key长度不能少于10位', trigger: 'blur' },
+  ],
 }
 
 // 监听显示状态
-watch(() => props.modelValue, (newVal) => {
-  visible.value = newVal
-  if (newVal) {
-    loadSettings()
-  }
-})
+watch(
+  () => props.modelValue,
+  (newVal) => {
+    visible.value = newVal
+    if (newVal) {
+      loadSettings()
+    }
+  },
+)
 
 watch(visible, (newVal) => {
   emit('update:modelValue', newVal)
@@ -144,7 +83,8 @@ const loadSettings = () => {
   const config = settingsStore.apiConfig
   form.value = {
     baseUrl: config.baseUrl || 'https://api.juheai.top',
-    apiKey: config.apiKey || ''
+    apiKey: config.apiKey || '',
+    translationModel: config.translationModel || 'gpt-4.1',
   }
 }
 
@@ -152,21 +92,21 @@ const loadSettings = () => {
 const handleSave = async () => {
   try {
     await formRef.value?.validate()
-    
+
     saving.value = true
-    
+
     // 保存到store
     settingsStore.updateApiConfig({
       baseUrl: form.value.baseUrl.trim(),
-      apiKey: form.value.apiKey.trim()
+      apiKey: form.value.apiKey.trim(),
+      translationModel: form.value.translationModel.trim(),
     })
-    
+
     // 延迟一下模拟保存过程
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
     emit('save', settingsStore.apiConfig)
     visible.value = false
-    
   } catch (error) {
     console.error('Settings save error:', error)
   } finally {
@@ -183,100 +123,322 @@ const handleClose = () => {
 const openApiKeyPage = () => {
   window.open('https://www.juhenext.com/zh/price', '_blank')
 }
+
+// 退出登录
+const handleLogout = async () => {
+  try {
+    await ElMessageBox.confirm('确定要退出登录吗？', '确认退出', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+
+    userStore.logout()
+    ElMessage.success('已退出登录')
+    visible.value = false
+
+    // 跳转到登录页面
+    router.push('/auth')
+  } catch {
+    // 用户取消
+  }
+}
 </script>
 
+<template>
+  <el-dialog
+    v-model="visible"
+    title="API设置"
+    top="5vh"
+    :width="dialogWidth"
+    :before-close="handleClose"
+    destroy-on-close
+    :class="{ 'mobile-dialog': isMobile, 'custom-settings-dialog': true }"
+  >
+    <template #header>
+      <div class="custom-dialog-header">
+        <div class="header-left">
+          <div class="header-icon">
+            <el-icon><Setting /></el-icon>
+          </div>
+          <span class="header-title">API设置</span>
+        </div>
+      </div>
+    </template>
+
+    <div class="custom-dialog-body">
+      <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="custom-form">
+        <div class="form-section">
+          <el-form-item label="API Base URL:" prop="baseUrl">
+            <el-input v-model="form.baseUrl" placeholder="https://api.juheai.top" />
+          </el-form-item>
+
+          <el-form-item label="API Key:" prop="apiKey">
+            <el-input
+              v-model="form.apiKey"
+              type="password"
+              placeholder="请输入您的API Key"
+              show-password
+            />
+            <div class="form-item-extra">
+              <el-button
+                type="primary"
+                plain
+                size="small"
+                @click="openApiKeyPage"
+                class="get-key-btn"
+              >
+                立即获取
+              </el-button>
+            </div>
+          </el-form-item>
+
+          <!-- 翻译模型选择 -->
+          <el-form-item label="翻译模型:">
+            <el-select
+              v-model="form.translationModel"
+              placeholder="选择翻译模型"
+              style="width: 100%"
+            >
+              <el-option label="gpt-4.1 (推荐)" value="gpt-4.1" />
+              <el-option label="gpt-4.1-mini" value="gpt-4.1-mini" />
+              <el-option label="gpt-4.1-nano" value="gpt-4.1-nano" />
+            </el-select>
+            <div class="form-item-tip">用于提示词的英文翻译功能</div>
+          </el-form-item>
+
+          <!-- 配置状态显示 -->
+          <el-form-item label="配置状态:">
+            <el-tag :type="isConfigured ? 'success' : 'warning'">
+              {{ isConfigured ? '已配置' : '未配置' }}
+            </el-tag>
+          </el-form-item>
+        </div>
+      </el-form>
+    </div>
+
+    <template #footer>
+      <div class="custom-dialog-footer">
+        <el-button
+          v-if="userStore.isAuthenticated"
+          type="danger"
+          plain
+          @click="handleLogout"
+          class="logout-btn"
+        >
+          退出登录
+        </el-button>
+        <div class="footer-actions">
+          <el-button @click="handleClose"> 取消 </el-button>
+          <el-button type="primary" @click="handleSave" :loading="saving"> 保存设置 </el-button>
+        </div>
+      </div>
+    </template>
+  </el-dialog>
+</template>
+
 <style lang="scss" scoped>
-.dialog-header {
+// 自定义弹窗样式
+:deep(.custom-settings-dialog) {
+  .el-dialog {
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .el-dialog__header {
+    padding: 0;
+    margin: 0;
+  }
+
+  .el-dialog__body {
+    padding: 0;
+  }
+
+  .el-dialog__footer {
+    padding: 0;
+  }
+}
+
+// 自定义头部样式
+.custom-dialog-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 8px 8px 0 0;
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .header-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      background: #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6b7280;
+
+      .el-icon {
+        font-size: 14px;
+      }
+    }
+
+    .header-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+  }
 }
 
-.form-item-extra {
-  margin-top: 8px;
+// 自定义弹窗主体
+.custom-dialog-body {
+  padding: 12px;
+
+  .form-section {
+    .el-form-item {
+      margin-bottom: 12px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      :deep(.el-form-item__label) {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 6px;
+        padding: 0;
+      }
+
+      .form-item-extra {
+        margin-top: 8px;
+
+        .get-key-btn {
+          font-size: 12px;
+          padding: 6px 12px;
+        }
+      }
+
+      .form-item-tip {
+        margin-top: 6px;
+        font-size: 12px;
+        color: #6b7280;
+        line-height: 1.4;
+      }
+    }
+  }
 }
 
-.dialog-footer {
+// 自定义底部样式
+.custom-dialog-footer {
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-top: 1px solid #a4a7a7;
+  border-radius: 0 0 8px 8px;
 
-:deep(.el-dialog) {
-  border-radius: 12px;
-}
+  .logout-btn {
+    font-size: 13px;
+    padding: 8px 16px;
+  }
 
-:deep(.el-dialog__header) {
-  padding: 20px 20px 10px 20px;
-  border-bottom: 1px solid #e4e7ed;
-}
+  .footer-actions {
+    display: flex;
+    gap: 12px;
 
-:deep(.el-dialog__body) {
-  padding: 20px;
-}
-
-:deep(.el-dialog__footer) {
-  padding: 10px 20px 20px 20px;
-  border-top: 1px solid #e4e7ed;
+    .el-button {
+      padding: 8px 20px;
+    }
+  }
 }
 
 // 移动端适配
 @media (max-width: 768px) {
-  :deep(.mobile-dialog) {
+  :deep(.mobile-dialog.custom-settings-dialog) {
     margin: 20px !important;
     max-height: calc(100vh - 40px);
-    
-    .el-dialog__header {
-      padding: 16px 16px 8px 16px;
-      
-      .dialog-header {
-        font-size: 14px;
+
+    .el-dialog {
+      border-radius: 8px;
+    }
+  }
+
+  .custom-dialog-header {
+    padding: 14px 16px;
+
+    .header-left {
+      gap: 8px;
+
+      .header-icon {
+        width: 22px;
+        height: 22px;
+
+        .el-icon {
+          font-size: 13px;
+        }
+      }
+
+      .header-title {
+        font-size: 15px;
       }
     }
-    
-    .el-dialog__body {
-      padding: 16px;
-      max-height: calc(100vh - 200px);
-      overflow-y: auto;
-      
-      .el-form {
-        .el-form-item {
-          margin-bottom: 16px;
-          
-          .el-form-item__label {
-            font-size: 14px;
-            line-height: 1.4;
-            padding-right: 8px;
+  }
+
+  .custom-dialog-body {
+    padding: 16px;
+    max-height: calc(100vh - 220px);
+    overflow-y: auto;
+
+    .form-section {
+      .el-form-item {
+        margin-bottom: 14px;
+
+        :deep(.el-form-item__label) {
+          font-size: 13px;
+          margin-bottom: 5px;
+        }
+
+        .form-item-extra {
+          margin-top: 6px;
+
+          .get-key-btn {
+            font-size: 11px;
+            padding: 5px 10px;
           }
-          
-          .el-form-item__content {
-            .el-input {
-              .el-input__wrapper {
-                font-size: 14px;
-              }
-            }
-            
-            .el-tag {
-              font-size: 12px;
-            }
-          }
+        }
+
+        .form-item-tip {
+          font-size: 11px;
+          margin-top: 5px;
         }
       }
     }
-    
-    .el-dialog__footer {
-      padding: 8px 16px 16px 16px;
-      
-      .dialog-footer {
-        gap: 8px;
-        
-        .el-button {
-          flex: 1;
-          font-size: 14px;
-        }
+  }
+
+  .custom-dialog-footer {
+    padding: 14px 16px;
+    flex-direction: column;
+    gap: 10px;
+
+    .logout-btn {
+      width: 100%;
+      padding: 8px 16px;
+      font-size: 12px;
+    }
+
+    .footer-actions {
+      width: 100%;
+      gap: 10px;
+
+      .el-button {
+        flex: 1;
+        padding: 8px 16px;
+        font-size: 13px;
       }
     }
   }
@@ -284,46 +446,21 @@ const openApiKeyPage = () => {
 
 // 小屏幕设备（手机竖屏）
 @media (max-width: 480px) {
-  :deep(.mobile-dialog) {
+  :deep(.mobile-dialog.custom-settings-dialog) {
     margin: 10px !important;
     max-height: calc(100vh - 20px);
-    
-    .el-dialog__header {
-      padding: 12px 12px 6px 12px;
-    }
-    
-    .el-dialog__body {
-      padding: 12px;
-      
-      .el-form {
-        .el-form-item {
-          margin-bottom: 12px;
-          
-          .el-form-item__label {
-            font-size: 13px;
-          }
-          
-          .el-form-item__content {
-            .el-input {
-              .el-input__wrapper {
-                font-size: 13px;
-              }
-            }
-          }
-        }
-      }
-    }
-    
-    .el-dialog__footer {
-      padding: 6px 12px 12px 12px;
-      
-      .dialog-footer {
-        .el-button {
-          font-size: 13px;
-          padding: 8px 16px;
-        }
-      }
-    }
+  }
+
+  .custom-dialog-header {
+    padding: 12px 14px;
+  }
+
+  .custom-dialog-body {
+    padding: 14px;
+  }
+
+  .custom-dialog-footer {
+    padding: 12px 14px;
   }
 }
 </style>

@@ -23,13 +23,11 @@ request.interceptors.request.use(
       config.headers['Authorization'] = `Bearer ${userStore.token}`
     }
 
-    // 如果是JSON数据，设置正确的Content-Type
+    // 如果是FormData，不设置Content-Type让axios自动设置
+    // 如果是普通对象，设置为JSON格式，让axios自动处理序列化
     if (!(config.data instanceof FormData)) {
       config.headers['Content-Type'] = 'application/json'
-      // 对于JSON数据，不需要使用Qs.stringify
-      if (config.data && typeof config.data === 'object') {
-        config.data = JSON.stringify(config.data)
-      }
+      // 删除手动JSON.stringify，让axios自动处理
     }
 
     return config
@@ -76,4 +74,3 @@ request.interceptors.response.use(
 
 
 export default request
-

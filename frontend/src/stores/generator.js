@@ -66,6 +66,18 @@ export const useGeneratorStore = defineStore('generator', () => {
     return _startTime ? ((Date.now() - _startTime) / 1000).toFixed(1) : '0'
   }
 
+  // 设置临时结果（立即显示base64图片）
+  const setTemporaryResult = (tempData) => {
+    currentResult.value = {
+      ...currentResult.value,
+      imageUrl: tempData.imageUrl,             // base64 URL
+      modelResponse: tempData.modelResponse || '',
+      elapsedTime: tempData.elapsedTime || getElapsedTime(),
+      timestamp: new Date().toISOString()
+    }
+    console.log('临时图片已设置，使用base64显示')
+  }
+
   // 生成成功并保存后更新结果 - 直接用后端数据
   const setGenerationResult = (savedImageData) => {
     const elapsedTime = getElapsedTime()
@@ -112,13 +124,13 @@ export const useGeneratorStore = defineStore('generator', () => {
   // 从图库选择图片时设置当前结果
   const setCurrentResultFromGallery = (imageData) => {
     currentResult.value = {
-      imageUrl: imageData.image_url,
+      imageUrl: imageData.image_url || imageData.imageUrl,
       prompt: imageData.prompt,
       model: imageData.model || '',
-      elapsedTime: imageData.elapsed_time || '',
-      timestamp: imageData.created_at,
-      modelResponse: imageData.model_response || '', // 模型回复
-      image_id: imageData.image_id
+      elapsedTime: imageData.elapsed_time || imageData.elapsedTime || '',
+      timestamp: imageData.created_at || imageData.timestamp,
+      modelResponse: imageData.modelResponse || imageData.model_response || '', // 支持两种字段名
+      image_id: imageData.image_id || imageData.id
     }
   }
 
@@ -167,6 +179,7 @@ export const useGeneratorStore = defineStore('generator', () => {
     // 方法
     startGeneration,
     getElapsedTime,      // 新增：获取计算后的时间
+    setTemporaryResult,  // 新增：设置临时结果
     setGenerationResult,
     setGenerationError,
     clearCurrentResult,

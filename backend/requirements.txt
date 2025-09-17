@@ -11,3 +11,4 @@ python-dotenv==1.0.1
 alibabacloud-oss-v2
 pillow
 pymysql
+gunicorn  # <--- 添加这一行

@@ -3,7 +3,7 @@ import request from "@/utils/request";
 // 登录
 export function Login(data) {
   return request({
-    url: "/api/auth/login",
+    url: "/auth/login",
     method: "post",
     data,
   });
@@ -11,7 +11,7 @@ export function Login(data) {
 // 注册发送验证码
 export function RegisterSendCode(data) {
   return request({
-    url: "/api/auth/send-code",
+    url: "/auth/send-code",
     method: "post",
     data,
   });
@@ -19,7 +19,7 @@ export function RegisterSendCode(data) {
 // 注册
 export function Register(data) {
   return request({
-    url: "/api/auth/register",
+    url: "/auth/register",
     method: "post",
     data,
   });

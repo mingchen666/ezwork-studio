@@ -1,11 +1,5 @@
 <template>
   <div class="ai-image-generator">
-    <!-- 移动端头部 -->
-    <div class="mobile-header" v-if="isMobile">
-      <h1>AI绘画程序</h1>
-      <p>基于Google Nano Banana模型</p>
-    </div>
-
     <!-- 桌面端布局 -->
     <div
       class="desktop-layout"
@@ -73,7 +67,6 @@ import { useImageGenerator } from './hooks/useImageGenerator'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useGalleryStore } from '@/stores/gallery'
 
-
 // 响应式检测
 const { isMobile } = useResponsive()
 
@@ -131,28 +124,7 @@ onMounted(async () => {
 
 <style lang="scss" scoped>
 .ai-image-generator {
-  height: 100vh;
-  background: #f5f7fa;
-
-  .mobile-header {
-    padding: 16px;
-    background: white;
-    border-bottom: 1px solid #e5e7eb;
-    text-align: center;
-
-    h1 {
-      font-size: 1.2rem;
-      margin: 0 0 4px 0;
-      color: #1f2937;
-      font-weight: 600;
-    }
-
-    p {
-      font-size: 0.8rem;
-      margin: 0;
-      color: #6b7280;
-    }
-  }
+  height: calc(100vh - 60px); // 减去头部高度
 
   .desktop-layout {
     display: grid;

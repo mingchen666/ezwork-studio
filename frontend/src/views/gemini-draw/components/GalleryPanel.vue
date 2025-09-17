@@ -14,9 +14,9 @@
             @click="toggleCollapse"
             :title="isCollapsed ? '展开图库' : '折叠图库'"
           >
-            <el-icon>
-              <ArrowLeft v-if="!isCollapsed" />
-              <ArrowRight v-else />
+            <el-icon size="20">
+              <Expand v-if="isCollapsed" />
+              <Fold v-else />
             </el-icon>
           </el-button>
         </div>
@@ -57,7 +57,7 @@
         </div>
 
         <!-- 展开状态 - 详细列表 -->
-        <div v-else class="gallery-expanded">
+        <div v-else class="gallery-expanded" ref="galleryContainer">
           <div
             v-for="item in displayImages"
             :key="item.id"
@@ -102,18 +102,26 @@
         </div>
 
         <!-- 操作按钮 - 只在展开状态显示 -->
-        <!-- <div v-if="imageCount > 0 && !isCollapsed" class="gallery-actions">
-          <el-button type="danger" size="medium" plain @click="clearAll"> 清空图库 </el-button>
-        </div> -->
+        <div v-if="imageCount > 0 && !isCollapsed" class="gallery-actions">
+          <el-button
+            type="primary"
+            size="small"
+            plain
+            @click="scrollToBottom"
+            :disabled="imageCount === 0"
+          >
+            滚动到底部
+          </el-button>
+        </div>
       </div>
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
+import { Delete, Expand, Fold } from '@element-plus/icons-vue'
 import { useGalleryStore } from '@/stores/gallery'
 
 // Emits
@@ -121,6 +129,9 @@ const emit = defineEmits(['select-image'])
 
 // 使用图库store
 const galleryStore = useGalleryStore()
+
+// 模板引用
+const galleryContainer = ref(null)
 
 // 计算属性
 const displayImages = computed(() => galleryStore.displayImages)
@@ -173,6 +184,16 @@ const clearAll = async () => {
   }
 }
 
+// 滚动到底部
+const scrollToBottom = () => {
+  if (galleryContainer.value) {
+    galleryContainer.value.scrollTo({
+      top: galleryContainer.value.scrollHeight,
+      behavior: 'smooth',
+    })
+  }
+}
+
 // 格式化日期时间 - 显示月日时分
 const formatDateTime = (timestamp) => {
   if (!timestamp) return ''
@@ -213,8 +234,7 @@ const formatDateTime = (timestamp) => {
     border: 1px solid #e5e7eb;
 
     :deep(.el-card__header) {
-      padding: 12px 16px;
-      background: #fafbfc;
+      padding: 10px 12px;
       border-bottom: 1px solid #e5e7eb;
     }
 
@@ -427,10 +447,11 @@ const formatDateTime = (timestamp) => {
   }
 
   .gallery-actions {
-    margin-top: 4px;
+    margin-top: 8px;
     text-align: center;
-    padding-top: 10px;
+    padding-top: 8px;
     border-top: 1px solid #e5e7eb;
+    flex-shrink: 0;
   }
 }
 

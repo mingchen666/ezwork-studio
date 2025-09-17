@@ -6,6 +6,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const baseUrl = ref('https://api.juheai.top')
   const apiKey = ref('')
   const model = ref('gemini-2.5-flash-image-preview')
+  const translationModel = ref('gpt-4.1')
   const version = ref('1.0.2')
   const theme = ref('light')
   const language = ref('zh-CN')
@@ -22,7 +23,8 @@ export const useSettingsStore = defineStore('settings', () => {
   const apiConfig = computed(() => ({
     baseUrl: baseUrl.value,
     apiKey: apiKey.value,
-    model: model.value
+    model: model.value,
+    translationModel: translationModel.value
   }))
 
   // 动作
@@ -36,12 +38,16 @@ export const useSettingsStore = defineStore('settings', () => {
     if (config.model !== undefined) {
       model.value = config.model
     }
+    if (config.translationModel !== undefined) {
+      translationModel.value = config.translationModel
+    }
   }
 
   const resetApiConfig = () => {
     baseUrl.value = 'https://api.juheai.top'
     apiKey.value = ''
     model.value = 'gemini-2.5-flash-image-preview'
+    translationModel.value = 'gpt-4.1'
   }
 
   const updateVersion = (newVersion) => {
@@ -56,11 +62,12 @@ export const useSettingsStore = defineStore('settings', () => {
     return false
   }
 
-  return {
+    return {
     // 状态
     baseUrl,
     apiKey,
     model,
+    translationModel,
     version,
     theme,
     language,
@@ -80,6 +87,6 @@ export const useSettingsStore = defineStore('settings', () => {
   persist: {
     key: 'ai-image-generator-settings',
     storage: localStorage,
-    pick: ['baseUrl', 'apiKey', 'model', 'version', 'theme', 'language']
+    pick: ['baseUrl', 'apiKey', 'model', 'translationModel', 'version', 'theme', 'language']
   }
 })

@@ -19,11 +19,16 @@ class Config:
     # 通用基础配置
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-key')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    # 文件上传大小限制 - 50MB
+    MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB
 
     # 邮件配置（所有环境通用）
     MAIL_SERVER = os.getenv('MAIL_SERVER', 'smtp.qq.com')
     MAIL_PORT = int(os.getenv('MAIL_PORT', 465))
-    MAIL_USE_TLS = os.getenv('MAIL_USE_TLS', 'true').lower() == 'true'
+    # 端口465使用SSL，端口587使用TLS
+    MAIL_USE_SSL = int(os.getenv('MAIL_PORT', 465)) == 465
+    MAIL_USE_TLS = int(os.getenv('MAIL_PORT', 465)) == 587
     MAIL_USERNAME = os.getenv('MAIL_USERNAME')
     MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER')

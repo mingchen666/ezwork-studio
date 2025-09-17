@@ -66,7 +66,10 @@ export const useGalleryStore = defineStore('gallery', () => {
   // 保存图片到服务器
   const saveImage = async (imageData) => {
     try {
+      console.log('开始保存图片到服务器...')
       const response = await saveImageService(imageData)
+      
+      console.log('服务器响应:', response)
 
       if (response.code === 200) {
         // 保存成功后，将新图片添加到列表开头
@@ -79,13 +82,23 @@ export const useGalleryStore = defineStore('gallery', () => {
         }
 
         console.log('图片保存成功:', newImage.image_id)
-        return { success: true, data: response.data }
+        return { success: true, data: response.data, message: response.message }
       } else {
+        console.error('保存失败，服务器返回:', response)
         throw new Error(response.message || '保存图片失败')
       }
     } catch (error) {
       console.error('保存图片失败:', error)
-      return { success: false, message: error.message }
+      // 检查是否是网络错误或服务器错误
+      if (error.response) {
+        console.error('服务器错误响应:', error.response.data)
+        return { success: false, message: `服务器错误: ${error.response.data.message || error.message}` }
+      } else if (error.request) {
+        console.error('网络请求失败:', error.request)
+        return { success: false, message: '网络连接失败，请检查网络' }
+      } else {
+        return { success: false, message: error.message || '保存图片失败' }
+      }
     }
   }
 

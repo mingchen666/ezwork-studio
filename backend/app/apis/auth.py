@@ -120,7 +120,17 @@ class RegisterResource(Resource):
 
             db.session.commit()
 
+            # 生成访问令牌
+            access_token = create_access_token(
+                identity=str(user.id),
+                expires_delta=timedelta(days=20)
+            )
+
             return APIResponse.success(
+                data={
+                    'user': user.to_dict(),
+                    'access_token': access_token
+                },
                 message='注册成功'
             )
 

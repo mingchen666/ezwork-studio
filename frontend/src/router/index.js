@@ -4,12 +4,30 @@ import { useUserStore } from '@/stores/user'
 const routes = [
   {
     path: '',
-    name: 'AIImageGenerator',
-    component: () => import('@/views/gemini-draw/index.vue'),
-    meta: {
-      title: 'Ezwork Studio',
-      requiresAuth: true
-    }
+    redirect: '/home',
+    name: 'AppLayout',
+    component: () => import('@/layouts/MainLayout.vue'),
+    children: [
+      {
+        path: '/home',
+        name: 'GeminiDraw',
+        component: () => import('@/views/gemini-draw/index.vue'),
+        meta: {
+          title: 'Ezwork Studio',
+          requiresAuth: true
+        }
+      },
+      {
+        path: '/test',
+        name: 'test',
+        component: () => import('@/views/test.vue'),
+        meta: {
+          title: 'Ezwork Studio',
+          requiresAuth: true
+        }
+      }
+    ]
+
   },
   {
     path: '/login',

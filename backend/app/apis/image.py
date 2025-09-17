@@ -2,7 +2,10 @@ from flask import request, current_app
 from flask_restful import Resource
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import base64
+import requests
 from datetime import datetime
+from io import BytesIO
+from PIL import Image
 
 from app import db, APIResponse
 from app.models.image_records import ImageRecord
@@ -41,8 +44,10 @@ class ImageSaveResource(Resource):
             return APIResponse.error('模型名称长度不能超过100字符')
 
         # 验证base64格式
-        if not self._is_valid_base64_image(image_data):
-            return APIResponse.error('无效的图片数据格式')
+        validation_result = self._validate_base64_image(image_data)
+        if not validation_result['valid']:
+            current_app.logger.error(f"图片数据验证失败: {validation_result['message']}")
+            return APIResponse.error(f"数据中未找到图片: {validation_result['message']}")
 
         # 检查用户存储空间
         storage = UserStorage.query.filter_by(user_id=user_id).first()
@@ -112,6 +117,75 @@ class ImageSaveResource(Resource):
             db.session.rollback()
             current_app.logger.error(f"保存图片记录失败: {str(e)}")
             return APIResponse.error('保存失败，请稍后重试', code=500)
+
+    def _validate_base64_image(self, image_data):
+        """详细验证base64图片数据并返回验证结果"""
+        try:
+            current_app.logger.info(f"开始验证图片数据，数据长度: {len(image_data) if image_data else 0}")
+            
+            if not image_data:
+                return {'valid': False, 'message': '图片数据为空'}
+            
+            if not isinstance(image_data, str):
+                return {'valid': False, 'message': '图片数据必须是字符串格式'}
+            
+            # 检查是否包含data URL前缀
+            if image_data.startswith('data:image'):
+                current_app.logger.info("检测到data URL格式")
+                if ',' not in image_data:
+                    return {'valid': False, 'message': 'data URL格式错误，缺少逗号分隔符'}
+                
+                # 提取base64部分
+                try:
+                    header, base64_part = image_data.split(',', 1)
+                    current_app.logger.info(f"data URL头部: {header}")
+                except ValueError:
+                    return {'valid': False, 'message': 'data URL格式错误，无法分割'}
+            else:
+                base64_part = image_data
+                current_app.logger.info("检测到纯base64格式")
+            
+            # 验证base64编码
+            try:
+                decoded = base64.b64decode(base64_part)
+                current_app.logger.info(f"base64解码成功，数据大小: {len(decoded)} bytes")
+            except Exception as e:
+                return {'valid': False, 'message': f'base64解码失败: {str(e)}'}
+            
+            # 检查解码后的数据大小
+            if len(decoded) < 100:
+                return {'valid': False, 'message': f'解码后数据太小: {len(decoded)} bytes'}
+            
+            # 检查是否为图片格式（简单的魔数检查）
+            if not self._check_image_format(decoded):
+                return {'valid': False, 'message': '数据不是有效的图片格式'}
+            
+            current_app.logger.info("图片数据验证成功")
+            return {'valid': True, 'message': '图片数据验证成功'}
+            
+        except Exception as e:
+            current_app.logger.error(f"图片数据验证异常: {str(e)}")
+            return {'valid': False, 'message': f'验证过程异常: {str(e)}'}
+    
+    def _check_image_format(self, data):
+        """检查数据是否为常见图片格式"""
+        if len(data) < 8:
+            return False
+        
+        # 检查常见图片格式的魔数
+        magic_numbers = [
+            b'\xFF\xD8\xFF',  # JPEG
+            b'\x89\x50\x4E\x47\x0D\x0A\x1A\x0A',  # PNG
+            b'\x47\x49\x46\x38',  # GIF
+            b'\x42\x4D',  # BMP
+            b'\x52\x49\x46\x46'  # WEBP (部分)
+        ]
+        
+        for magic in magic_numbers:
+            if data.startswith(magic):
+                return True
+        
+        return False
 
     def _is_valid_base64_image(self, data):
         """验证是否为有效的base64图片数据"""
@@ -270,3 +344,121 @@ class ImageDeleteResource(Resource):
             db.session.rollback()
             current_app.logger.error(f"删除图片失败: {str(e)}")
             return APIResponse.error('删除失败，请稍后重试', code=500)
+
+
+class ImageUrlToBase64Resource(Resource):
+    """图片URL转Base64接口 - 用于"修改此图"功能"""
+
+    @jwt_required()
+    def post(self):
+        """将图片URL转换为base64格式"""
+        user_id = get_jwt_identity()
+        data = request.get_json()
+
+        # 参数验证
+        if not data or 'image_url' not in data:
+            return APIResponse.error('缺少必需参数: image_url')
+
+        image_url = data.get('image_url', '').strip()
+        if not image_url:
+            return APIResponse.error('图片URL不能为空')
+
+        # 验证URL格式
+        if not image_url.startswith(('http://', 'https://')):
+            return APIResponse.error('图片URL格式无效')
+
+        try:
+            current_app.logger.info(f"用户 {user_id} 开始转换图片URL: {image_url}")
+
+            # 设置请求头
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'image/*,*/*;q=0.8',
+                'Accept-Encoding': 'gzip, deflate',
+                'Connection': 'keep-alive',
+            }
+
+            # 下载图片
+            response = requests.get(image_url, headers=headers, timeout=30, stream=True)
+            response.raise_for_status()
+
+            # 检查Content-Type
+            content_type = response.headers.get('Content-Type', '')
+            if not content_type.startswith('image/'):
+                return APIResponse.error('URL指向的不是有效的图片文件')
+
+            # 检查文件大小
+            content_length = response.headers.get('Content-Length')
+            if content_length:
+                file_size = int(content_length)
+                # 限制图片大小为10MB
+                if file_size > 10 * 1024 * 1024:
+                    return APIResponse.error('图片文件过大，最大支持10MB')
+
+            # 读取图片数据
+            image_data = response.content
+            
+            # 检查实际大小
+            if len(image_data) > 10 * 1024 * 1024:
+                return APIResponse.error('图片文件过大，最大支持10MB')
+
+            if len(image_data) < 100:
+                return APIResponse.error('图片数据过小，可能不是有效的图片文件')
+
+            # 使用PIL验证图片格式并获取信息
+            try:
+                image_io = BytesIO(image_data)
+                pil_image = Image.open(image_io)
+                pil_image.verify()  # 验证图片完整性
+                
+                # 重新打开获取信息（verify后需要重新打开）
+                image_io.seek(0)
+                pil_image = Image.open(image_io)
+                
+                width, height = pil_image.size
+                format_name = pil_image.format.lower() if pil_image.format else 'unknown'
+                
+                current_app.logger.info(f"图片信息: {width}x{height}, 格式: {format_name}, 大小: {len(image_data)} bytes")
+                
+            except Exception as img_error:
+                current_app.logger.error(f"图片验证失败: {str(img_error)}")
+                return APIResponse.error('图片文件格式无效或已损坏')
+
+            # 转换为base64
+            base64_data = base64.b64encode(image_data).decode('utf-8')
+            
+            # 确定MIME类型
+            mime_type = content_type if content_type.startswith('image/') else 'image/png'
+            
+            # 构建完整的data URL
+            data_url = f"data:{mime_type};base64,{base64_data}"
+
+            current_app.logger.info(f"图片转换成功，用户: {user_id}")
+
+            return APIResponse.success(
+                data={
+                    'base64': base64_data,  # 纯base64数据
+                    'dataUrl': data_url,    # 完整的data URL
+                    'mimeType': mime_type,  # MIME类型
+                    'width': width,         # 图片宽度
+                    'height': height,       # 图片高度
+                    'size': len(image_data),# 文件大小
+                    'format': format_name   # 图片格式
+                },
+                message='图片转换成功'
+            )
+
+        except requests.RequestException as e:
+            current_app.logger.error(f"下载图片失败: {str(e)}")
+            if "timeout" in str(e).lower():
+                return APIResponse.error('下载图片超时，请重试')
+            elif "404" in str(e):
+                return APIResponse.error('图片不存在或已被删除')
+            elif "403" in str(e):
+                return APIResponse.error('没有权限访问该图片')
+            else:
+                return APIResponse.error('下载图片失败，请检查URL是否正确')
+        
+        except Exception as e:
+            current_app.logger.error(f"图片转换失败: {str(e)}")
+            return APIResponse.error('图片转换失败，请重试', code=500)
